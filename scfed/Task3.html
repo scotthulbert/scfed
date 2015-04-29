@@ -1,0 +1,72 @@
+<html>
+	<head>
+		<title>Canvas Test</title>
+	</head>
+	
+	<body>
+		<p style="text-align:center;">
+        <canvas id="Canvas1" width="800" height="600" style="border:thin;">
+        </canvas>
+        <Script type="text/javascript">
+			var c = document.getElementById("Canvas1");
+			var ctx = c.getContext("2d");
+			var form1 = 0;
+			var form2 = 0;
+			var form3 = 0;
+			var grd2 = ctx.createLinearGradient(0,450,0,800);
+			var grd1 = ctx.createLinearGradient(0,450,0,800);
+			
+			grd1.addColorStop(0,"#565656");
+			grd1.addColorStop(1,"#424242");
+			ctx.fillStyle = grd1;
+			ctx.fillRect(0,450,160,150);
+			ctx.fillRect(0,550,800,150);
+			ctx.fillRect(240,450,120,150);
+			ctx.fillRect(440,450,120,150)
+			ctx.fillRect(640,450,160,150)
+			
+			
+
+			grd2.addColorStop(0,"orange");
+			grd2.addColorStop(1,"yellow");
+			ctx.fillStyle = grd2;
+			
+			function fillForm1() {
+				form1 += 1;
+				if(form1==5){ctx.fillRect(160,450,80,20);}
+				if(form1==4){ctx.fillRect(160,470,80,20);}
+				if(form1==3){ctx.fillRect(160,490,80,20);}
+				if(form1==2){ctx.fillRect(160,510,80,20);}
+				if(form1==1){ctx.fillRect(160,530,80,20);}
+			}
+			
+			function fillForm2() {
+				form2 += 1;
+				if(form2==5){ctx.fillRect(360,450,80,20);}
+				if(form2==4){ctx.fillRect(360,470,80,20);}
+				if(form2==3){ctx.fillRect(360,490,80,20);}
+				if(form2==2){ctx.fillRect(360,510,80,20);}
+				if(form2==1){ctx.fillRect(360,530,80,20);}
+			}
+			
+			function fillForm3() {
+				form3 += 1;
+				if(form3==5){ctx.fillRect(560,450,80,20);}
+				if(form3==4){ctx.fillRect(560,470,80,20);}
+				if(form3==3){ctx.fillRect(560,490,80,20);}
+				if(form3==2){ctx.fillRect(560,510,80,20);}
+				if(form3==1){ctx.fillRect(560,530,80,20);}
+			}
+			var img = document.createElement('img');
+			img.src = "electrode.png";
+			img.onload = function() {
+        		ctx.drawImage(img, 50, 566);
+      		};
+		</Script>
+        <br/>
+		<button onClick="fillForm1()">Click to add to Form 1</button>
+		<button onClick="fillForm2()">Click to add to Form 2</button>
+		<button onClick="fillForm3()">Click to add to Form 3</button>
+        </p>
+	</body>
+</html>

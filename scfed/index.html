@@ -1,0 +1,487 @@
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
+<html xmlns="http://www.w3.org/1999/xhtml">
+<head>
+<meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
+<title>Untitled Document</title>
+<style>
+Body {
+	text-align: center;
+	margin:0;
+	padding:0;
+	font-family:Arial, Helvetica, sans-serif;
+}
+.Game {
+	width: 800px;
+	height: 600px;
+	border: 1px solid #000;
+	margin-left: auto;
+	display:inline-block;
+	padding-left: 0;
+	padding-top: 0;
+	padding-right: 0;
+	padding-bottom: 0;
+}
+.Dial {
+	margin-left: 5px;
+	width: 400px;
+	height: 600px;
+	border: 1px solid #000;
+	margin-right:auto;
+	display:inline-block;
+}
+.Volt {
+	margin-top: 7px;
+	margin-left: auto;
+	margin-right:auto;
+	width: 1211px;
+	height: 100px;
+	border: 1px solid #000;
+	display:inline-block;
+}
+.banner {
+    background-image: url('banner.png');
+	background-position:center;
+    background-repeat: no-repeat;
+    width: 100%;
+    height: 180px;
+	margin-bottom:5px;
+	margin-left:auto;
+	margin-right:auto;
+	display:inline-block;
+}
+.cntDiv {
+	text-align:center;	
+}
+.btn {
+	width:125px;
+	height:40px;
+	border-bottom-left-radius:20px;
+	border-bottom-right-radius:20px;
+	border-top-left-radius:20px;
+	border-top-right-radius:20px;
+	background:#00003D;
+	-webkit-transition: background, 0.1s;
+	transition: background, 0.1s;
+	color:#FFF;
+	font-family:Arial, Helvetica, sans-serif;
+	display:inline-block;
+	margin-top: 10px;
+	padding-left:auto;
+	padding-right:auto;
+}
+.btn:hover {
+	background: none repeat scroll 0% 0% #B3D4FC;
+	cursor:pointer;	
+}
+
+canvas
+{
+	padding: 0;
+	display: inline-block;
+	float: left;
+}
+</style>
+
+<script type="text/javascript" src="dial.js"></script>
+<script type="text/javascript" src="Molecule.js"></script>
+<script type="text/javascript" src="Obstacle.js"></script>
+<script type="text/javascript">
+
+	//SIZE OF CANVASES
+	const CANVAS_WIDTH = 800;
+	const CANVAS_HEIGHT = 600;
+	
+	const GAP_WIDTH = 80;
+	const GAP_HEIGHT = 90;
+	const BOTTOM_BIT_HEIGHT = 50;
+	
+	const MOL_SIZE = GAP_WIDTH + 35; //+35 IS TO COMPENSATE FOR WHITESPACE AROUND MOLECULE IMAGE
+
+	//FOR EXPLOSIONS
+	const ANIMATION_FPS = 30;
+
+	const MAX_PRESSURE = 100;
+	const MAX_TEMPERATURE = 100;
+	
+	//'GOLDEN ZONE' MAX/MIN VALUES
+	const GOLDEN_PRESSURE_MIN = 60;
+	const GOLDEN_PRESSURE_MAX = 70;
+	const GOLDEN_TEMP_MIN = 60;
+	const GOLDEN_TEMP_MAX = 70;
+	
+	//HOW FAR TO THE LEFT OF GAPS WILL MOLECULES START?
+	const MOL_OFFSET = 80;
+	
+	//GLOBAL VAR FOR NO OF GAPS
+	var gaps;
+
+	//
+	
+	/*--PICTURES--*/
+	
+	//MOLECULE EXPLOSION IMAGES
+	var explosionImages = [];
+	for (var i=1;i<=32;i++) {
+		var img = document.createElement("img");
+		img.src = "images/explosion/Particle Frame " + i + ".png";
+		explosionImages.push(img);
+	}
+	
+	//MOLECULE IMAGE
+	var molImage = document.createElement("img");
+	molImage.src = "images/Player.png";
+	
+	//OBSTACLES IMAGE
+	var obsImage = document.createElement("img");
+	obsImage.src = "images/obstacle.png";
+	
+	//BACKGROUND IMAGE
+	var backgroundImage = document.createElement("img");
+	backgroundImage.src = "images/background.jpg";
+	
+	//ARRAY CONTAINING ALL IMAGES
+	var allImages = explosionImages.concat(molImage,obsImage,backgroundImage);
+	var totalImages = allImages.length; //TOTAL NUMBER OF IMAGES
+	var loadedImages = 0;
+	var imagesLoaded = false;
+	
+	for (var i=0;i<allImages.length;i++) {
+		allImages[i].onload = function() {
+			loadedImages++;
+			
+			if (loadedImages == totalImages) {
+				imagesLoaded = true;
+				initEverything();
+			}
+		}
+	}
+	
+	/*- - - - -*/
+
+	//MAKE THE CANVASES
+	//var backCanvas = /*document.createElement("canvas")*/ document.getElementById("backCanvas");
+	//var frontCanvas = /*document.createElement("canvas")*/ document.getElementById("frontCanvas");
+	var backCanvas = null;
+	var frontCanvas = null;
+
+	//FILL THE WHOLE SCREEN
+	/*
+	backCanvas.width = CANVAS_WIDTH;
+	backCanvas.height = CANVAS_HEIGHT;
+	frontCanvas.width = CANVAS_WIDTH;
+	frontCanvas.height = CANVAS_HEIGHT;
+	*/
+
+	//CANVAS CONTEXTS...
+	//var bc = backCanvas.getContext("2d");
+	//var ctx = frontCanvas.getContext("2d");
+	var bc = null;
+	var ctx = null;
+
+	//ADD CANVASES TO PAGE
+	//document.body.appendChild(backCanvas);
+	//document.body.appendChild(frontCanvas);
+
+	var dialTemperature;
+	var dialPressure;
+
+	function initEverything() {
+		
+		dialTemperature = new Dial("dialTemp");
+		dialPressure = new Dial("dialPressure");
+
+		backCanvas = document.getElementById("backCanvas");
+		frontCanvas = document.getElementById("frontCanvas");
+		bc = backCanvas.getContext("2d");
+		ctx = frontCanvas.getContext("2d");
+		
+		//BACKGROUND IS DRAWN WHEN GAME STARTS BUT HAVE IT HERE ANYWAY SO THAT IT IS SHOWN WHILST USER IS CHOOSING TEMP/PRESSURE FOR THE FIRST TIME
+		bc.drawImage(backgroundImage,0,0,backCanvas.width,backCanvas.height);
+	};
+	
+	var playing = false;
+	var then;
+	var temperature;
+	var pressure;
+	var molecules = [];
+	var obstacles = [];
+
+	/* - - - - - */
+
+	function getGapCoords(n) {
+		//RETURN X COORD FOR LEFT SIDE OF GAP N
+		return n * (CANVAS_WIDTH / (gaps+1)) - 0.5*GAP_WIDTH;
+	}
+	
+	function goldenPressure(pressure) {
+		return pressure >= GOLDEN_PRESSURE_MIN && pressure <= GOLDEN_PRESSURE_MAX;
+	}
+	function goldenTemp(temperature) {
+		return temperature >= GOLDEN_TEMP_MIN && temperature <= GOLDEN_TEMP_MAX;
+	}
+	
+	function getNoOfObstacles(pressure) {
+		if (pressure > GOLDEN_PRESSURE_MIN) {
+			return 0;
+		}
+		else {
+			var minCount = 0;
+			var maxCount = 20;
+		
+			var count = Math.floor(maxCount - (pressure / MAX_PRESSURE)*(maxCount - minCount));
+			console.log("obs count is " + count);
+			
+			return count;
+		}
+	}
+	
+	function getObstacleSize(pressure) {
+		var maxSize = 70;
+		var minSize = 1;
+		
+		var size = Math.floor(maxSize - (pressure / MAX_PRESSURE)*(maxSize - minSize));
+		console.log("obs size is " + size);
+		
+		return size;
+	}
+	
+	var easterEgg = function(){
+		alert("joe is the best");
+	};
+	
+	function getNoOfMolecules(pressure) {
+		var minCount = 1;
+		var maxCount = 5;
+		
+		var count = Math.floor((pressure / MAX_PRESSURE)*(maxCount - minCount) + minCount);
+		console.log("mol count is " + count);
+		
+		return count;
+	}
+	
+	function getMoleculeSpeed(temperature) {
+		var minSpeed = 0;
+		var maxSpeed = 100;
+		
+		var speed = Math.floor((temperature / MAX_TEMPERATURE)*(maxSpeed - minSpeed) + minSpeed);
+		console.log("speed is " + speed);
+		
+		return speed;
+	}
+	
+	function drawBackground() {
+		
+		bc.drawImage(backgroundImage,0,0,backCanvas.width,backCanvas.height);
+				
+		var templateCanvas = document.getElementById("templateCanvas");
+		var tc = templateCanvas.getContext("2d");
+		
+		var grd2 = tc.createLinearGradient(0,450,0,800);
+		var grd1 = tc.createLinearGradient(0,450,0,800);
+		
+		grd1.addColorStop(0,"#565656");
+		grd1.addColorStop(1,"#424242");
+		tc.fillStyle = grd1;
+				
+		tc.fillRect(0,CANVAS_HEIGHT,CANVAS_WIDTH,-(BOTTOM_BIT_HEIGHT+GAP_HEIGHT));
+		
+		for (var i=1;i<=gaps;i++) {
+			var x = getGapCoords(i);
+			var y = CANVAS_HEIGHT - BOTTOM_BIT_HEIGHT - GAP_HEIGHT;
+			tc.clearRect(x,y,GAP_WIDTH,GAP_HEIGHT);
+		}
+				
+		bc.drawImage(templateCanvas,0,0);
+
+		grd2.addColorStop(0,"orange");
+		grd2.addColorStop(1,"yellow");
+		bc.fillStyle = grd2;
+		
+		var electrodeImg = document.createElement('img');
+		electrodeImg.src = "images/electrode.png";
+		electrodeImg.onload = function() {
+			bc.drawImage(electrodeImg,0,CANVAS_HEIGHT - electrodeImg.height,CANVAS_WIDTH,electrodeImg.height);
+		};
+	}
+	
+	function fillForm(n) {
+		var x = getGapCoords(n);
+		var y = CANVAS_HEIGHT - BOTTOM_BIT_HEIGHT - GAP_HEIGHT;
+		bc.fillRect(x,y,GAP_WIDTH,GAP_HEIGHT);
+	}
+	
+	/* - - - - */
+
+	function random(min,max) {
+		return min + Math.random()*(max - min);
+	}
+	
+	function start() {
+		
+		//DON'T START GAME IF IMAGES ARE NOT LOADED
+		if (!imagesLoaded) return false;
+		
+		temperature = dialTemperature.getValue(MAX_TEMPERATURE);
+		pressure = dialPressure.getValue(MAX_PRESSURE);
+		
+		molecules = [];
+		obstacles = [];
+		
+		then = Date.now();
+		playing = true;
+		
+		var obsCount = getNoOfObstacles(pressure);
+		gaps = getNoOfMolecules(pressure);
+		var speed = getMoleculeSpeed(temperature);
+		var obsRadius = getObstacleSize(pressure);
+
+		var molY = 0.5*MOL_SIZE - 17.5; // -17.5 TO ACCOUNT FOR WHITESPACE...
+		if (temperature < GOLDEN_TEMP_MIN) {
+			molAngle = 0;
+		}
+		else if (temperature > GOLDEN_TEMP_MAX) {
+			molAngle = 999;
+		}
+		else {
+			molAngle = Math.atan( MOL_OFFSET / (CANVAS_HEIGHT - BOTTOM_BIT_HEIGHT - GAP_HEIGHT - molY) );
+		}
+
+		//MAKE MOLECULES
+		for (var i=1;i<=gaps;i++) {
+			molecules.push(
+				new Molecule(i,molY,speed,molAngle)
+			);
+		}
+
+		//MAKE OBSTACLES
+		for (var i=0;i<obsCount;i++) {
+			
+			//RANDOM THINGS FOR EACH OBSTACLE
+			var x = random(0,CANVAS_WIDTH);
+			var y = random(
+				100,
+				CANVAS_HEIGHT - BOTTOM_BIT_HEIGHT - GAP_HEIGHT - 2*obsRadius
+			);
+
+			obstacles.push(
+				new Obstacle(x,y,obsRadius,speed)
+			);
+		}
+		
+		if (temperature > GOLDEN_TEMP_MAX || pressure > GOLDEN_TEMP_MAX) {
+			for (var i=0;i<molecules.length;i++) {
+				molecules[i].explode();
+			}
+		}
+		
+		//DRAW TEMPLATE
+		drawBackground();
+	};
+
+	//MAIN LOOP
+	var main = function() {
+
+		if (playing) {
+			var now = Date.now();
+			var dt = (now - then) / 1000;
+			then = now;
+
+			//CLEAR FOREGROUND CANVAS
+			ctx.clearRect(0,0,frontCanvas.width,frontCanvas.height);
+
+			if (molecules.length == 0) {
+				playing = false;
+			}
+
+			//DRAW AND UPDATE MOLECULES
+			for (var i=0;i<molecules.length;i++) {
+				molecules[i].update(dt);
+				
+				//CHECK IF MOLECULE STILL EXISTS BEFORE DRWING IT JUST IN CASE IT THE WAS THE LAST ONE IN
+				//molecules AND IT WAS EXPLODED
+				if(typeof(molecules[i]) !== "undefined") {
+					molecules[i].draw();
+				}
+			}
+
+			//DRAW AND UPDATE OBSTACLES AND CHECK FOR COLLISION WITH MOLECULES
+			for (var i=0;i<obstacles.length;i++) {
+				obstacles[i].update(dt);
+				obstacles[i].draw();
+				for (var j=0;j<molecules.length;j++) {
+					if (obstacles[i].isTouchingMolecule(molecules[j])) {
+						molecules[j].explode();
+					}
+				}
+			}
+		}
+	};
+	window.setInterval(main, 1); //THIS MAKES SURE THAT main IS CALLED EVERY 1 MS (OR AS QUICKLY AS POSSIBLE)
+	
+	// the popup
+	function showPopup()
+	{
+		document.getElementById("popup").style.visibility = "visible";
+	};
+	
+	function gotoTabInst()
+	{
+		document.getElementById("tabinst").style.display = "block";
+		document.getElementById("tabcred").style.display = "none";
+	};
+	
+	function gotoTabCred()
+	{
+		document.getElementById("tabinst").style.display = "none";
+		document.getElementById("tabcred").style.display = "block";
+	};
+	
+	function hidePopup()
+	{
+		document.getElementById("popup").style.visibility = "hidden";
+	};
+	
+</script>
+</head>
+
+<body>
+<div class="cntDiv">
+	<div class="banner"></div>
+    <div class="Game" style="position: relative;">
+	<canvas id="backCanvas" width="800" height="600" style="position: absolute; left: 0; top: 0;"></canvas>
+	<canvas id="frontCanvas" width="800" height="600" style="position: absolute; left: 0; top: 0;"></canvas>
+	<canvas id="templateCanvas" width="800" height="600" style="display:none;"></canvas>
+    </div>
+    <div class="Dial">
+    <canvas id="dialTemp" width="200" height="600" data-bottom-color="#ff0000" data-top-color="#ffaaaa" style="background-color: black;"></canvas>
+    <canvas id="dialPressure" width="200" height="600" data-bottom-color="#0000ff" data-top-color="#aaaaff" style="background-color: black;"></canvas>
+    </div>
+    <br />
+    <div class="Volt">
+    <button onclick="start();">Click to test this.</button>
+    </div>
+    <br />
+    <div onclick="start();" class="btn" style="margin-left:auto; margin-right:10px;">
+    <p>Play Now</p>
+    </div>
+    <div onclick="showPopup();" class="btn" style="margin-left:10px; margin-right:10px;">
+    <p>Instructions</p>
+    </div>
+    <div onclick="start();" class="btn" style="margin-left:10px; margin-right:auto;">
+    <p>Reset Game</p>
+    </div>
+    
+	<div id="popup" style="visibility: hidden; position: absolute; left: 10%; width: 80%; top: 10%; height: 80%; border: 1px block solid; background-color: white;">
+		<div class="tabstrip" style="display: block;">
+			<div class="tab" style="display: inline; border: 1px black solid; margin: 0;"><a href="javascript:gotoTabInst();">Instructions</a></div>
+			<div class="tab" style="display: inline; border: 1px black solid; margin: 0;"><a href="javascript:gotoTabCred();">Credits</a></div>
+			<div class="tab" style="display: inline; border: 1px black solid; background-color: red; margin: 0;"><a href="javascript:hidePopup();">X</a></div>
+	</div>
+	<div class="popup-content" style="display: block;">
+		<div id="tabinst" style="display: block;">Here are the instructions :)</div>
+		<div id="tabcred" style="display: none;">Here are the credits: Jake Mears and literally no one else</div>
+	</div>
+    
+<div>
+</body>
+</html>

@@ -1,0 +1,17 @@
+/*THIS PUTS ALL CANVASES IN THE TOP LEFT CORNER OF PAGE
+(SO THEY OVERLAP) SO YOU CAN HAVE SEPERATE CANVAS FOR BACKGROUND*/
+canvas {
+	position:absolute;
+	top:0;
+	left:0;
+}
+
+/*THIS IS JUST TO HIDE THE SCROLLBARS BECAUSE THEY LOOK STUPID*/
+body {
+	overflow:hidden;
+}
+
+button {
+	position:absolute;
+	right:0;
+}
